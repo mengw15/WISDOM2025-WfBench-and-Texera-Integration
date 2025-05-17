@@ -85,6 +85,8 @@ object AmberConfig {
   val isFaultToleranceEnabled: Boolean = faultToleranceLogRootFolder.nonEmpty
 
   // Scheduling
+  val maxConcurrentRegions: Int =
+    getConfSource.getInt("schedule-generator.max-concurrent-regions")
   val enableCostBasedScheduleGenerator: Boolean =
     getConfSource.getBoolean("schedule-generator.enable-cost-based-schedule-generator")
   val useGlobalSearch: Boolean = getConfSource.getBoolean("schedule-generator.use-global-search")
