@@ -21,7 +21,7 @@ package edu.uci.ics.amber.engine.architecture.scheduling
 
 import com.twitter.util.Future
 import com.typesafe.scalalogging.LazyLogging
-import edu.uci.ics.amber.engine.architecture.common.AkkaActorService
+import edu.uci.ics.amber.engine.architecture.common.{AkkaActorRefMappingService, AkkaActorService}
 import edu.uci.ics.amber.engine.architecture.controller.ControllerConfig
 import edu.uci.ics.amber.engine.architecture.controller.execution.WorkflowExecution
 import edu.uci.ics.amber.engine.common.rpc.AsyncRPCClient
@@ -42,6 +42,12 @@ class WorkflowExecutionCoordinator(
       : mutable.HashMap[RegionIdentity, RegionExecutionCoordinator] =
     mutable.HashMap()
 
+  @transient var actorRefService: AkkaActorRefMappingService = _
+
+  def setupActorRefService(actorRefService: AkkaActorRefMappingService): Unit = {
+    this.actorRefService = actorRefService
+  }
+
   /**
     * Each invocation will execute the next batch of Regions that are ready to be executed, if there are any.
     */
@@ -49,25 +55,43 @@ class WorkflowExecutionCoordinator(
     if (workflowExecution.getRunningRegionExecutions.nonEmpty) {
       return Future(())
     }
-    Future
-      .collect({
-        val nextRegions = getNextRegions()
-        executedRegions.append(nextRegions)
-        nextRegions
-          .map(region => {
-            workflowExecution.initRegionExecution(region)
-            regionExecutionCoordinators(region.id) = new RegionExecutionCoordinator(
-              region,
-              workflowExecution,
-              asyncRPCClient,
-              controllerConfig
-            )
-            regionExecutionCoordinators(region.id)
-          })
-          .map(_.execute(actorService))
+    // For all currently completed regions, send termination request.
+
+    // 2. Terminate all finished regions first
+    val terminationF: Future[Unit] =
+      Future.collect(
+        regionExecutionCoordinators
+          .filter{
+            case (regionId, regionExecutionCoordinator) =>
+              !regionExecutionCoordinator.terminated &&
+              workflowExecution.getRegionExecution(regionId).isCompleted
+          }
+          .map(_._2.terminate(this.actorRefService))
           .toSeq
-      })
-      .unit
+      ).unit
+
+    // 3. After termination completes, start the next regions
+    terminationF.flatMap { _ =>
+      Future
+        .collect({
+          val nextRegions = getNextRegions()
+          executedRegions.append(nextRegions)
+          nextRegions
+            .map(region => {
+              workflowExecution.initRegionExecution(region)
+              regionExecutionCoordinators(region.id) = new RegionExecutionCoordinator(
+                region,
+                workflowExecution,
+                asyncRPCClient,
+                controllerConfig
+              )
+              regionExecutionCoordinators(region.id)
+            })
+            .map(_.execute(actorService))
+            .toSeq
+        })
+        .unit
+    }
   }
 
   def getRegionOfLink(link: PhysicalLink): Region = {
