@@ -25,7 +25,10 @@ import edu.uci.ics.amber.core.virtualidentity.PhysicalOpIdentity
 import edu.uci.ics.amber.core.workflow._
 import edu.uci.ics.amber.engine.architecture.scheduling.ScheduleGenerator.replaceVertex
 import edu.uci.ics.amber.engine.architecture.scheduling.config.{PortConfig, ResourceConfig}
-import edu.uci.ics.amber.engine.architecture.scheduling.resourcePolicies.{DefaultResourceAllocator, ExecutionClusterInfo}
+import edu.uci.ics.amber.engine.architecture.scheduling.resourcePolicies.{
+  DefaultResourceAllocator,
+  ExecutionClusterInfo
+}
 import edu.uci.ics.amber.engine.common.AmberConfig
 import edu.uci.ics.amber.operator.SpecialPhysicalOpFactory
 import org.jgrapht.graph.DirectedAcyclicGraph
@@ -119,8 +122,7 @@ abstract class ScheduleGenerator(
   def generateScheduleFromRegionPlan(regionPlan: RegionPlan): Schedule = {
     val inDegree = mutable.Map.empty[RegionIdentity, Int]
     regionPlan.topologicalIterator().foreach { rid =>
-      inDegree(rid) =
-        regionPlan.dag.incomingEdgesOf(rid).asScala.size
+      inDegree(rid) = regionPlan.dag.incomingEdgesOf(rid).asScala.size
     }
 
     val ready = mutable.Queue(
@@ -150,11 +152,10 @@ abstract class ScheduleGenerator(
       level += 1
     }
 
-    val levelSets: Map[Int, Set[Region]] = tmpLevelSets.view
-      .map { case (lvl, idSet) =>
+    val levelSets: Map[Int, Set[Region]] = tmpLevelSets.view.map {
+      case (lvl, idSet) =>
         lvl -> idSet.iterator.map(regionPlan.getRegion).toSet
-      }
-      .toMap
+    }.toMap
 
     Schedule(levelSets)
   }

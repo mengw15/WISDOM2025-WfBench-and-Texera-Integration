@@ -26,6 +26,8 @@ import edu.uci.ics.amber.engine.architecture.controller.ControllerConfig
 import edu.uci.ics.amber.engine.architecture.controller.execution.WorkflowExecution
 import edu.uci.ics.amber.engine.common.rpc.AsyncRPCClient
 import edu.uci.ics.amber.core.workflow.{GlobalPortIdentity, PhysicalLink}
+import edu.uci.ics.amber.engine.architecture.rpc.controlcommands.EmptyRequest
+import edu.uci.ics.amber.engine.common.virtualidentity.util.CONTROLLER
 
 import scala.collection.mutable
 
@@ -59,16 +61,18 @@ class WorkflowExecutionCoordinator(
 
     // 2. Terminate all finished regions first
     val terminationF: Future[Unit] =
-      Future.collect(
-        regionExecutionCoordinators
-          .filter{
-            case (regionId, regionExecutionCoordinator) =>
-              !regionExecutionCoordinator.terminated &&
-              workflowExecution.getRegionExecution(regionId).isCompleted
-          }
-          .map(_._2.terminate(this.actorRefService))
-          .toSeq
-      ).unit
+      Future
+        .collect(
+          regionExecutionCoordinators
+            .filter {
+              case (regionId, regionExecutionCoordinator) =>
+                !regionExecutionCoordinator.terminated &&
+                  workflowExecution.getRegionExecution(regionId).isCompleted
+            }
+            .map(_._2.terminate(this.actorRefService))
+            .toSeq
+        )
+        .unit
 
     // 3. After termination completes, start the next regions
     terminationF.flatMap { _ =>

@@ -39,7 +39,6 @@ class RoundRobinPartitioner(Partitioner):
             (receiver, [])
             for receiver in {channel.to_worker_id for channel in partitioning.channels}
         ]
-        print("PART: ", self.partitioning, "RECEIVERS: ", self.receivers)
         self.round_robin_index = 0
 
     @overrides
@@ -72,7 +71,6 @@ class RoundRobinPartitioner(Partitioner):
     ]:
         for receiver, batch in self.receivers:
             if len(batch) > 0:
-                print("FLUSHING: ", receiver, batch)
                 yield receiver, batch
                 batch.clear()
             yield receiver, marker
