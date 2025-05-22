@@ -19,6 +19,7 @@
 
 package edu.uci.ics.amber.engine.architecture.controller.promisehandlers
 
+import akka.pattern.gracefulStop
 import com.twitter.util.Future
 import edu.uci.ics.amber.engine.architecture.controller.{
   ControllerAsyncRPCHandlerInitializer,
@@ -30,7 +31,10 @@ import edu.uci.ics.amber.engine.architecture.rpc.controlcommands.{
   QueryStatisticsRequest
 }
 import edu.uci.ics.amber.engine.architecture.rpc.controlreturns.EmptyReturn
+import edu.uci.ics.amber.engine.common.FutureBijection._
 import edu.uci.ics.amber.engine.common.virtualidentity.util.SELF
+
+import scala.concurrent.duration.DurationInt
 
 /** indicate a worker has completed its execution
   * i.e. received and processed all data from upstreams
@@ -65,6 +69,12 @@ trait WorkerExecutionCompletedHandler {
           sendToClient(ExecutionStateUpdate(cp.workflowExecution.getState))
           cp.controllerTimerService.disableStatusUpdate()
         }
+        // TODO: this temporarily fixes the status update issue but is not clean
+        Thread.sleep(10)
+        val ref = cp.actorRefService.getActorRef(ctx.sender)
+        val stop = gracefulStop(ref, 5.seconds).asTwitter()
+
+        Future.collect(Seq(stop))
       })
     EmptyReturn()
   }

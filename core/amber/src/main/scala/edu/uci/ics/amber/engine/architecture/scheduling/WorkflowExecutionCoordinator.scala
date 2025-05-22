@@ -57,45 +57,25 @@ class WorkflowExecutionCoordinator(
     if (workflowExecution.getRunningRegionExecutions.nonEmpty) {
       return Future(())
     }
-    // For all currently completed regions, send termination request.
-
-    // 2. Terminate all finished regions first
-    val terminationF: Future[Unit] =
-      Future
-        .collect(
-          regionExecutionCoordinators
-            .filter {
-              case (regionId, regionExecutionCoordinator) =>
-                !regionExecutionCoordinator.terminated &&
-                  workflowExecution.getRegionExecution(regionId).isCompleted
-            }
-            .map(_._2.terminate(this.actorRefService))
-            .toSeq
-        )
-        .unit
-
-    // 3. After termination completes, start the next regions
-    terminationF.flatMap { _ =>
-      Future
-        .collect({
-          val nextRegions = getNextRegions()
-          executedRegions.append(nextRegions)
-          nextRegions
-            .map(region => {
-              workflowExecution.initRegionExecution(region)
-              regionExecutionCoordinators(region.id) = new RegionExecutionCoordinator(
-                region,
-                workflowExecution,
-                asyncRPCClient,
-                controllerConfig
-              )
-              regionExecutionCoordinators(region.id)
-            })
-            .map(_.execute(actorService))
-            .toSeq
-        })
-        .unit
-    }
+    Future
+      .collect({
+        val nextRegions = getNextRegions()
+        executedRegions.append(nextRegions)
+        nextRegions
+          .map(region => {
+            workflowExecution.initRegionExecution(region)
+            regionExecutionCoordinators(region.id) = new RegionExecutionCoordinator(
+              region,
+              workflowExecution,
+              asyncRPCClient,
+              controllerConfig
+            )
+            regionExecutionCoordinators(region.id)
+          })
+          .map(_.execute(actorService))
+          .toSeq
+      })
+      .unit
   }
 
   def getRegionOfLink(link: PhysicalLink): Region = {
