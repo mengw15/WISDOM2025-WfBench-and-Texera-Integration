@@ -19,16 +19,11 @@
 
 package edu.uci.ics.amber.engine.architecture.scheduling
 
-import akka.pattern.gracefulStop
 import com.twitter.util.Future
 import edu.uci.ics.amber.core.storage.DocumentFactory
 import edu.uci.ics.amber.core.storage.VFSURIFactory.decodeURI
 import edu.uci.ics.amber.core.workflow.{GlobalPortIdentity, PhysicalLink, PhysicalOp}
-import edu.uci.ics.amber.engine.architecture.common.{
-  AkkaActorRefMappingService,
-  AkkaActorService,
-  ExecutorDeployment
-}
+import edu.uci.ics.amber.engine.architecture.common.{AkkaActorService, ExecutorDeployment}
 import edu.uci.ics.amber.engine.architecture.controller.execution.{
   OperatorExecution,
   WorkflowExecution
@@ -53,19 +48,9 @@ import edu.uci.ics.amber.engine.architecture.scheduling.config.{
   PortConfig,
   ResourceConfig
 }
-import edu.uci.ics.amber.engine.common.AmberRuntime.actorSystem
 import edu.uci.ics.amber.engine.common.rpc.AsyncRPCClient
 import edu.uci.ics.amber.engine.common.virtualidentity.util.CONTROLLER
 import edu.uci.ics.texera.web.resource.dashboard.user.workflow.WorkflowExecutionsResource
-
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future => ScalaFuture}
-import com.twitter.util.{Promise => TwitterPromise}
-import edu.uci.ics.amber.core.virtualidentity.ActorVirtualIdentity
-import edu.uci.ics.amber.engine.architecture.worker.statistics.WorkerState.COMPLETED
-import edu.uci.ics.amber.engine.common.AmberLogging
-
-import scala.util.{Failure, Success}
 
 class RegionExecutionCoordinator(
     region: Region,
@@ -73,16 +58,6 @@ class RegionExecutionCoordinator(
     asyncRPCClient: AsyncRPCClient,
     controllerConfig: ControllerConfig
 ) {
-
-  var terminated = false
-
-  private implicit val ec: ExecutionContext = actorSystem.dispatcher // or another EC
-
-  def terminate(actorRefMappingService: AkkaActorRefMappingService): Future[Unit] = {
-    terminated = true
-    sendStops(region, actorRefMappingService)
-  }
-
   def execute(actorService: AkkaActorService): Future[Unit] = {
 
     // fetch resource config
@@ -328,91 +303,6 @@ class RegionExecutionCoordinator(
           )
         }
     }
-  }
-
-  private def toTwitterStops[T](sf: ScalaFuture[T])(implicit ec: ExecutionContext): Future[T] = {
-    val p = TwitterPromise[T]()
-    sf.onComplete {
-      case scala.util.Success(v) => p.setValue(v)
-      case scala.util.Failure(e) => p.setException(e)
-    }(ec)
-    p
-  }
-
-  private def sendStops(region: Region, actorRefMappingService: AkkaActorRefMappingService) = {
-    region.getOperators
-      .map(_.id)
-      .flatMap { opId =>
-        workflowExecution
-          .getRegionExecution(region.id)
-          .getOperatorExecution(opId)
-          .getWorkerIds
-          .map { workerId =>
-            workflowExecution
-              .getRegionExecution(region.id)
-              .getOperatorExecution(opId)
-              .getWorkerExecution(workerId)
-              .setState(COMPLETED)
-
-          }
-      }
-
-    region.getPorts
-      .flatMap { gpid =>
-        workflowExecution
-          .getRegionExecution(region.id)
-          .getOperatorExecution(gpid.opId)
-          .getWorkerIds
-          .map { workerId =>
-            if (gpid.input) {
-              workflowExecution
-                .getRegionExecution(region.id)
-                .getOperatorExecution(gpid.opId)
-                .getWorkerExecution(workerId)
-                .getInputPortExecution(gpid.portId)
-                .setCompleted()
-            } else {
-              workflowExecution
-                .getRegionExecution(region.id)
-                .getOperatorExecution(gpid.opId)
-                .getWorkerExecution(workerId)
-                .getOutputPortExecution(gpid.portId)
-                .setCompleted()
-            }
-          }
-      }
-
-    def stopAndLog(
-        stopFuture: scala.concurrent.Future[Boolean],
-        ref: akka.actor.ActorRef
-    )(implicit ec: ExecutionContext): Unit = {
-      stopFuture.onComplete {
-        case Success(true) ⇒ println(s"Actor $ref stopped successfully.", ref.path)
-        case Success(false) ⇒ println(s"Actor $ref did not terminate within timeout.", ref.path)
-        case Failure(ex) ⇒ println(s"Actor $ref: error while stopping: $ex", ref.path)
-      }
-    }
-
-    val scalaStops: Seq[ScalaFuture[Boolean]] = region.getOperators
-      .map(_.id)
-      .flatMap { opId =>
-        workflowExecution
-          .getRegionExecution(region.id)
-          .getOperatorExecution(opId)
-          .getWorkerIds
-          .map { workerId =>
-            val ref = actorRefMappingService.getActorRef(workerId)
-            val f = gracefulStop(ref, 5.seconds)
-            stopAndLog(f, ref)
-            f
-          }
-      }
-      .toSeq
-    val stops = scalaStops.map(toTwitterStops)
-
-    Future(())
-      .flatMap(_ => Future.collect(stops))
-      .unit
   }
 
 }

@@ -74,7 +74,6 @@ class ControllerProcessor(
 
   def setupActorRefService(actorRefService: AkkaActorRefMappingService): Unit = {
     this.actorRefService = actorRefService
-    this.workflowExecutionCoordinator.setupActorRefService(this.actorRefService)
   }
 
   @transient var logManager: ReplayLogManager = _

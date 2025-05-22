@@ -21,13 +21,11 @@ package edu.uci.ics.amber.engine.architecture.scheduling
 
 import com.twitter.util.Future
 import com.typesafe.scalalogging.LazyLogging
-import edu.uci.ics.amber.engine.architecture.common.{AkkaActorRefMappingService, AkkaActorService}
+import edu.uci.ics.amber.engine.architecture.common.AkkaActorService
 import edu.uci.ics.amber.engine.architecture.controller.ControllerConfig
 import edu.uci.ics.amber.engine.architecture.controller.execution.WorkflowExecution
 import edu.uci.ics.amber.engine.common.rpc.AsyncRPCClient
 import edu.uci.ics.amber.core.workflow.{GlobalPortIdentity, PhysicalLink}
-import edu.uci.ics.amber.engine.architecture.rpc.controlcommands.EmptyRequest
-import edu.uci.ics.amber.engine.common.virtualidentity.util.CONTROLLER
 
 import scala.collection.mutable
 
@@ -43,12 +41,6 @@ class WorkflowExecutionCoordinator(
   private val regionExecutionCoordinators
       : mutable.HashMap[RegionIdentity, RegionExecutionCoordinator] =
     mutable.HashMap()
-
-  @transient var actorRefService: AkkaActorRefMappingService = _
-
-  def setupActorRefService(actorRefService: AkkaActorRefMappingService): Unit = {
-    this.actorRefService = actorRefService
-  }
 
   /**
     * Each invocation will execute the next batch of Regions that are ready to be executed, if there are any.
