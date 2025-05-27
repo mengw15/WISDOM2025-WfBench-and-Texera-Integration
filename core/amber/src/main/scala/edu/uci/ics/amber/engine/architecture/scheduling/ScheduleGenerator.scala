@@ -19,19 +19,16 @@
 
 package edu.uci.ics.amber.engine.architecture.scheduling
 
-import edu.uci.ics.amber.core.storage.VFSURIFactory
-import edu.uci.ics.amber.core.storage.VFSURIFactory.createResultURI
 import edu.uci.ics.amber.core.virtualidentity.PhysicalOpIdentity
 import edu.uci.ics.amber.core.workflow._
 import edu.uci.ics.amber.engine.architecture.scheduling.ScheduleGenerator.replaceVertex
-import edu.uci.ics.amber.engine.architecture.scheduling.config.{PortConfig, ResourceConfig}
-import edu.uci.ics.amber.engine.architecture.scheduling.resourcePolicies.{DefaultResourceAllocator, ExecutionClusterInfo}
-import edu.uci.ics.amber.engine.common.AmberConfig
-import edu.uci.ics.amber.operator.SpecialPhysicalOpFactory
+import edu.uci.ics.amber.engine.architecture.scheduling.resourcePolicies.{
+  DefaultResourceAllocator,
+  ExecutionClusterInfo
+}
 import org.jgrapht.graph.DirectedAcyclicGraph
 import org.jgrapht.traverse.TopologicalOrderIterator
 
-import scala.collection.mutable
 import scala.jdk.CollectionConverters.{CollectionHasAsScala, IteratorHasAsScala}
 
 object ScheduleGenerator {
@@ -77,86 +74,15 @@ abstract class ScheduleGenerator(
   /**
     * A schedule is a ranking on the regions of a region plan. Currently we use a total order of the regions.
     */
-
-  //Sequential
-
-  //  def generateScheduleFromRegionPlan(regionPlan: RegionPlan): Schedule = {
-  //    val levelSets = regionPlan
-  //      .topologicalIterator()
-  //      .zipWithIndex
-  //      .map(zippedRegionId => {
-  //        zippedRegionId._2 -> Set.apply(regionPlan.getRegion(zippedRegionId._1))
-  //      })
-  //      .toMap
-  //    Schedule.apply(levelSets)
-  //  }
-
-  // Fully Parallel
-
-  //  def generateScheduleFromRegionPlan(regionPlan: RegionPlan): Schedule = {
-  //    val tmpLevelSets = mutable.Map.empty[Int, mutable.Set[RegionIdentity]]
-  //    val levels       = mutable.Map.empty[RegionIdentity, Int]
-  //    regionPlan.topologicalIterator().foreach { rid =>
-  //      val level = regionPlan.dag
-  //        .incomingEdgesOf(rid).asScala
-  //        .foldLeft(0) { (maxL, edge) =>
-  //          val predId = regionPlan.dag.getEdgeSource(edge)
-  //          math.max(maxL, levels.getOrElse(predId, 0) + 1)
-  //        }
-  //      levels(rid) = level
-  //      tmpLevelSets
-  //        .getOrElseUpdate(level, mutable.Set.empty)
-  //        .add(rid)
-  //    }
-  //    val levelSets: Map[Int, Set[Region]] = tmpLevelSets.view
-  //      .map { case (lvl, idSet) =>
-  //        lvl -> idSet.iterator.map(regionPlan.getRegion).toSet
-  //      }
-  //      .toMap
-  //    Schedule(levelSets)
-  //  }
-
   def generateScheduleFromRegionPlan(regionPlan: RegionPlan): Schedule = {
-    val inDegree = mutable.Map.empty[RegionIdentity, Int]
-    regionPlan.topologicalIterator().foreach { rid =>
-      inDegree(rid) =
-        regionPlan.dag.incomingEdgesOf(rid).asScala.size
-    }
-
-    val ready = mutable.Queue(
-      inDegree.collect { case (rid, 0) => rid }.toSeq: _*
-    )
-
-    val tmpLevelSets = mutable.Map.empty[Int, mutable.Set[RegionIdentity]]
-    var level = 0
-
-    while (ready.nonEmpty) {
-      val batchIds = (1 to AmberConfig.maxConcurrentRegions).flatMap { _ =>
-        if (ready.nonEmpty) Some(ready.dequeue()) else None
-      }.toSet
-      tmpLevelSets(level) = batchIds.to(mutable.Set)
-
-      batchIds.foreach { rid =>
-        regionPlan.dag
-          .outgoingEdgesOf(rid)
-          .asScala
-          .map(edge => regionPlan.dag.getEdgeTarget(edge))
-          .foreach { succ =>
-            inDegree(succ) -= 1
-            if (inDegree(succ) == 0) ready.enqueue(succ)
-          }
-      }
-
-      level += 1
-    }
-
-    val levelSets: Map[Int, Set[Region]] = tmpLevelSets.view
-      .map { case (lvl, idSet) =>
-        lvl -> idSet.iterator.map(regionPlan.getRegion).toSet
-      }
+    val levelSets = regionPlan
+      .topologicalIterator()
+      .zipWithIndex
+      .map(zippedRegionId => {
+        zippedRegionId._2 -> Set.apply(regionPlan.getRegion(zippedRegionId._1))
+      })
       .toMap
-
-    Schedule(levelSets)
+    Schedule.apply(levelSets)
   }
 
   def allocateResource(
@@ -229,88 +155,5 @@ abstract class ScheduleGenerator(
           )
           replaceVertex(regionDAG, region, newRegion)
       }
-  }
-
-  def replaceLinkWithMaterialization(
-      physicalLink: PhysicalLink,
-      writerReaderPairs: mutable.HashMap[PhysicalOpIdentity, PhysicalOpIdentity]
-  ): PhysicalPlan = {
-
-    val fromOp = physicalPlan.getOperator(physicalLink.fromOpId)
-    val fromPortId = physicalLink.fromPortId
-
-    val toOp = physicalPlan.getOperator(physicalLink.toOpId)
-    val toPortId = physicalLink.toPortId
-
-    val newPhysicalPlan = physicalPlan
-      .removeLink(physicalLink)
-
-    val globalPortId = GlobalPortIdentity(
-      physicalLink.fromOpId,
-      physicalLink.fromPortId
-    )
-
-    // create the uri of the materialization storage
-    val storageURI = VFSURIFactory.createResultURI(
-      workflowContext.workflowId,
-      workflowContext.executionId,
-      globalPortId
-    )
-
-    // create cache reader and link
-
-    val schema = newPhysicalPlan
-      .getOperator(fromOp.id)
-      .outputPorts(fromPortId)
-      ._3
-      .toOption
-      .get
-
-    val matReaderPhysicalOp: PhysicalOp = SpecialPhysicalOpFactory.newSourcePhysicalOp(
-      workflowContext.workflowId,
-      workflowContext.executionId,
-      storageURI,
-      toOp.id,
-      toPortId,
-      schema
-    )
-    val readerToDestLink =
-      PhysicalLink(
-        matReaderPhysicalOp.id,
-        matReaderPhysicalOp.outputPorts.keys.head,
-        toOp.id,
-        toPortId
-      )
-    // add the pair to the map for later adding edges between 2 regions.
-    writerReaderPairs(fromOp.id) = matReaderPhysicalOp.id
-    newPhysicalPlan
-      .addOperator(matReaderPhysicalOp)
-      .addLink(readerToDestLink)
-  }
-
-  def updateRegionsWithOutputPortStorage(
-      outputPortsToMaterialize: Set[GlobalPortIdentity],
-      regionDAG: DirectedAcyclicGraph[Region, RegionLink]
-  ): Unit = {
-    (outputPortsToMaterialize ++ workflowContext.workflowSettings.outputPortsNeedingStorage)
-      .foreach(outputPortId => {
-        getRegions(outputPortId.opId, regionDAG).foreach(fromRegion => {
-          val portConfigToAdd = outputPortId -> {
-            val uriToAdd = createResultURI(
-              workflowId = workflowContext.workflowId,
-              executionId = workflowContext.executionId,
-              globalPortId = outputPortId
-            )
-            PortConfig(storageURI = uriToAdd)
-          }
-          val newResourceConfig = fromRegion.resourceConfig match {
-            case Some(existingConfig) =>
-              existingConfig.copy(portConfigs = existingConfig.portConfigs + portConfigToAdd)
-            case None => ResourceConfig(portConfigs = Map(portConfigToAdd))
-          }
-          val newFromRegion = fromRegion.copy(resourceConfig = Some(newResourceConfig))
-          replaceVertex(regionDAG, fromRegion, newFromRegion)
-        })
-      })
   }
 }
