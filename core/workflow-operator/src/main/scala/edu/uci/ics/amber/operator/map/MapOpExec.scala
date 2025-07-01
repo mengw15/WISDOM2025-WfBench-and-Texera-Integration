@@ -29,6 +29,7 @@ import edu.uci.ics.amber.core.tuple.{Tuple, TupleLike}
 abstract class MapOpExec extends OperatorExecutor with Serializable {
 
   private var mapFunc: Tuple => TupleLike = _
+  private var finishFunc: Int => TupleLike = _
 
   /**
     * Provides the flatMap function of this executor, it should be called in the constructor
@@ -37,6 +38,16 @@ abstract class MapOpExec extends OperatorExecutor with Serializable {
     */
   def setMapFunc(func: Tuple => TupleLike): Unit = mapFunc = func
 
+  def setFinishFunc(func: Int => TupleLike): Unit = finishFunc = func
+
   override def processTuple(tuple: Tuple, port: Int): Iterator[TupleLike] = Iterator(mapFunc(tuple))
+
+  override def onFinish(port: Int): Iterator[TupleLike] = {
+    if (finishFunc != null) {
+      Iterator(finishFunc(port))
+    } else {
+      Iterator.empty
+    }
+  }
 
 }

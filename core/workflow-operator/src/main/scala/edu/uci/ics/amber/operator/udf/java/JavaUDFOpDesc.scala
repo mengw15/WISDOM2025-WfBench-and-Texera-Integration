@@ -40,19 +40,23 @@ class JavaUDFOpDesc extends LogicalOp {
   @JsonProperty(
     required = true,
     defaultValue =
-      "import edu.uci.ics.texera.workflow.common.operators.map.MapOpExec;\n" +
-        "import edu.uci.ics.amber.engine.common.model.tuple.Tuple;\n" +
-        "import edu.uci.ics.amber.engine.common.model.tuple.TupleLike;\n" +
+      "import edu.uci.ics.amber.operator.map.MapOpExec;\n" +
+        "import edu.uci.ics.amber.core.tuple.Tuple;\n" +
+        "import edu.uci.ics.amber.core.tuple.TupleLike;\n" +
         "import scala.Function1;\n" +
         "import java.io.Serializable;\n" +
         "\n" +
         "public class JavaUDFOpExec extends MapOpExec {\n" +
         "    public JavaUDFOpExec () {\n" +
         "        this.setMapFunc((Function1<Tuple, TupleLike> & Serializable) this::processTuple);\n" +
+        "        this.setFinishFunc((Function1<Object, TupleLike> & Serializable) this::onFinish);\n" +
         "    }\n" +
         "    \n" +
         "    public TupleLike processTuple(Tuple tuple) {\n" +
         "        return tuple;\n" +
+        "    }\n" +
+        "    public TupleLike onFinish(Object port) {\n" +
+        "        return null;\n" +
         "    }\n" +
         "}"
   )
@@ -158,10 +162,12 @@ class JavaUDFOpDesc extends LogicalOp {
     }
     val outputPortInfo = if (outputPorts != null) {
       outputPorts.zipWithIndex.map {
-        case (portDesc, idx) => OutputPort(PortIdentity(idx), displayName = portDesc.displayName)
+//        case (portDesc, idx) => OutputPort(PortIdentity(idx), displayName = portDesc.displayName)
+        case (portDesc, idx) => OutputPort(PortIdentity(idx), displayName = portDesc.displayName, blocking = true) //blocking to true
       }
     } else {
-      List(OutputPort())
+      List(OutputPort(blocking = true)) //blocking to true
+//      List(OutputPort())
     }
 
     OperatorInfo(

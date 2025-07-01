@@ -69,6 +69,7 @@ trait WorkerExecutionCompletedHandler {
           sendToClient(ExecutionStateUpdate(cp.workflowExecution.getState))
           cp.controllerTimerService.disableStatusUpdate()
         }
+        ////72-78(region release hacky solution)
         // TODO: this temporarily fixes the status update issue but is not clean
         Thread.sleep(10)
         val ref = cp.actorRefService.getActorRef(ctx.sender)

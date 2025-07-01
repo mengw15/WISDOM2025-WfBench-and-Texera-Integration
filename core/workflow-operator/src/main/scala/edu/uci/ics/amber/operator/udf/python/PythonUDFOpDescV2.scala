@@ -158,10 +158,10 @@ class PythonUDFOpDescV2 extends LogicalOp {
     }
     val outputPortInfo = if (outputPorts != null) {
       outputPorts.zipWithIndex.map {
-        case (portDesc, idx) => OutputPort(PortIdentity(idx), displayName = portDesc.displayName)
+        case (portDesc, idx) => OutputPort(PortIdentity(idx), displayName = portDesc.displayName, blocking = true) //blocking to true
       }
     } else {
-      List(OutputPort())
+      List(OutputPort(blocking = true)) //blocking to true
     }
 
     OperatorInfo(

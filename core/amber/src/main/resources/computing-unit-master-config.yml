@@ -33,7 +33,7 @@ server:
         threshold: ERROR  # Only log errors in console for simplicity
 
 logging:
-  level: INFO
+  level: WARN
   loggers:
     "io.dropwizard": INFO
   appenders:

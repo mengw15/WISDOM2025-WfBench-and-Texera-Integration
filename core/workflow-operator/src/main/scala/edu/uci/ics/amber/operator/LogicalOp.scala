@@ -86,6 +86,9 @@ import edu.uci.ics.amber.operator.typecasting.TypeCastingOpDesc
 import edu.uci.ics.amber.operator.udf.java.JavaUDFOpDesc
 import edu.uci.ics.amber.operator.udf.python._
 import edu.uci.ics.amber.operator.udf.python.source.PythonUDFSourceOpDescV2
+import edu.uci.ics.amber.operator.udf.java.JavaUDFSourceOpDesc
+import edu.uci.ics.amber.operator.bash.BashOpDesc
+import edu.uci.ics.amber.operator.bash.BashSourceOpDesc
 import edu.uci.ics.amber.operator.udf.r.{RUDFOpDesc, RUDFSourceOpDesc}
 import edu.uci.ics.amber.operator.union.UnionOpDesc
 import edu.uci.ics.amber.operator.unneststring.UnnestStringOpDesc
@@ -179,6 +182,9 @@ trait StateTransferFunc
     new Type(value = classOf[ScatterplotOpDesc], name = "Scatterplot"),
     new Type(value = classOf[PythonUDFOpDescV2], name = "PythonUDFV2"),
     new Type(value = classOf[PythonUDFSourceOpDescV2], name = "PythonUDFSourceV2"),
+    new Type(value = classOf[JavaUDFSourceOpDesc], name = "JavaUDFSource"),
+    new Type(value = classOf[BashOpDesc], name = "Bash"),
+    new Type(value = classOf[BashSourceOpDesc], name = "BashSource"),
     new Type(value = classOf[DualInputPortsPythonUDFOpDescV2], name = "DualInputPortsPythonUDFV2"),
     new Type(value = classOf[MySQLSourceOpDesc], name = "MySQLSource"),
     new Type(value = classOf[PostgreSQLSourceOpDesc], name = "PostgreSQLSource"),

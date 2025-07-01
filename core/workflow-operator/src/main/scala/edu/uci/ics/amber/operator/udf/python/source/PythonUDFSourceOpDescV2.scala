@@ -85,7 +85,7 @@ class PythonUDFSourceOpDescV2 extends SourceOperatorDescriptor {
       "User-defined function operator in Python script",
       OperatorGroupConstants.PYTHON_GROUP,
       List.empty, // No input ports for a source operator
-      List(OutputPort()),
+      List(OutputPort(blocking = true)), //blocking to true
       supportReconfiguration = true
     )
   }

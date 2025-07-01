@@ -47,6 +47,7 @@ class AkkaActorRefMappingService(actorService: AkkaActorService) extends AmberLo
     new mutable.HashMap[ActorVirtualIdentity, mutable.Queue[NetworkMessage]]
   actorRefMapping(SELF) = actorService.self
 
+  //this function for region release(hacky solution)
   def getActorRef(id: ActorVirtualIdentity): ActorRef = {
     actorRefMapping(id)
   }

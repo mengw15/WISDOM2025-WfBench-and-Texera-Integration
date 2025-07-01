@@ -47,6 +47,10 @@ class WorkflowWebsocketResource extends LazyLogging {
 
   @OnOpen
   def myOnOpen(session: Session, config: EndpointConfig): Unit = {
+
+    session.setMaxTextMessageBufferSize(10000 * 1024)
+    session.setMaxBinaryMessageBufferSize(10000 * 1024)
+
     val sessionState = new SessionState(session)
     SessionState.setState(session.getId, sessionState)
     val wid = session.getRequestParameterMap.get("wid").get(0).toLong
