@@ -136,13 +136,13 @@ Since wfcommons may differ between platforms, Linux users should:
 
 1. Follow the [wfcommons website](https://pypi.org/project/wfcommons/) to download version 1.1.
 2. Copy `wfcommons/wfcommons/wfbench/translator/texera.py` into the corresponding location.
-3. Edit `wfcommons/wfbench/translator/__init__.py` by adding the following line:
+3. Edit corresponding `wfcommons/wfbench/translator/__init__.py` by adding the following line:
 
 ```python
 from .texera import TexeraTranslator
 ```
 
-4. Edit `wfcommons/wfbench/__init__.py` by adding the following line:
+4. Edit corresponding `wfcommons/wfbench/__init__.py` by adding the following line:
 
 ```python
 from .translator import TexeraTranslator
