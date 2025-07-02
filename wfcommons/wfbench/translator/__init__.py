@@ -8,12 +8,12 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-from .dask import DaskTranslator
-from .nextflow import NextflowTranslator
-from .parsl import ParslTranslator
-from .pegasus import PegasusTranslator
-from .swift_t import SwiftTTranslator
-from .taskvine import TaskVineTranslator
-from .cwl import CWLTranslator
-from .bash import BashTranslator
+# from .dask import DaskTranslator
+# from .nextflow import NextflowTranslator
+# from .parsl import ParslTranslator
+# from .pegasus import PegasusTranslator
+# from .swift_t import SwiftTTranslator
+# from .taskvine import TaskVineTranslator
+# from .cwl import CWLTranslator
+# from .bash import BashTranslator
 from .texera import TexeraTranslator
