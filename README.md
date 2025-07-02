@@ -69,7 +69,7 @@ Execute core/scripts/sql/iceberg_postgres_catalog.sql to create the database for
 
 ### Workflow Generation
 
-Use `texera_workflow_json_generator.py`:
+Use `texera_workflow_json_generator.py`, check this file to modify the parameters and the path for storing the directory:
 
 * The script will generate a directory containing:
 
