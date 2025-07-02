@@ -49,20 +49,6 @@ Edit `core/workflow-core/src/main/resources/storage.conf`:
  }
 ```
 
-Additionally, update the JDBC configuration accordingly:
-
-```conf
-jdbc {
-    url = "jdbc:postgresql://localhost:5432/texera_db?currentSchema=texera_db,public"
-    url = ${?STORAGE_JDBC_URL}
-
-    username = "postgres"
-    username = ${?STORAGE_JDBC_USERNAME}
-
-    password = ""
-    password = ${?STORAGE_JDBC_PASSWORD}
-}
-```
 
 
 ## Setup PostgreSQL
@@ -79,6 +65,21 @@ jdbc {
 Execute core/scripts/sql/texera_ddl.sql to create texera_db database.
 
 Execute core/scripts/sql/iceberg_postgres_catalog.sql to create the database for storing Iceberg catalogs.
+
+Additionally, update the JDBC configuration in `core/workflow-core/src/main/resources/storage.conf` accordingly:
+
+```conf
+jdbc {
+    url = "jdbc:postgresql://localhost:5432/texera_db?currentSchema=texera_db,public"
+    url = ${?STORAGE_JDBC_URL}
+
+    username = "postgres"
+    username = ${?STORAGE_JDBC_USERNAME}
+
+    password = ""
+    password = ${?STORAGE_JDBC_PASSWORD}
+}
+```
 
 ## Running the Workflow
 
