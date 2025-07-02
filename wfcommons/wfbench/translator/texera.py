@@ -31,10 +31,6 @@ class TexeraTranslator(Translator):
         """
         cmd_str = f"./bin/{task.program}"
         final_args = []
-        print("input")
-        print(task.input_files[0].file_id)
-        print(task.input_files[0].link)
-        print(task.cores)
         for arg in task.args:
             if arg.startswith("--output-files"):
                 flag, outfiles_str = arg.split(" ", 1)
@@ -78,8 +74,6 @@ class TexeraTranslator(Translator):
         ops_to_view = []
         ops_to_reuse = []
 
-        print("self.task===##")
-        print(self.tasks)
         for task_id, task in self.tasks.items():
             is_root = task_id in self.root_task_names
             cmd = self._generate_command(task)
