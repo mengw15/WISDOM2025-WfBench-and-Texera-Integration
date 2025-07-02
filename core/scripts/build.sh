@@ -16,4 +16,4 @@
 # under the License.
 
 ./scripts/build-services.sh
-./scripts/gui.sh
+#./scripts/gui.sh
