@@ -26,8 +26,7 @@ class TexeraTranslator(Translator):
 
     def _generate_command(self, task: Task) -> str:
         """
-        Generates an executable command string based on the task, handling
-        --input-files and --output-files rewriting the paths under data/.
+        Generates an executable command string based on the task
         """
         cmd_str = f"./bin/{task.program}"
         final_args = []
@@ -44,6 +43,14 @@ class TexeraTranslator(Translator):
                 infiles_arr = [f"data/{f}" for f in infiles]
                 infiles_json = json.dumps(infiles_arr).replace('"', '\\"')
                 final_args.append(f'{flag} "{infiles_json}"')
+            elif arg.startswith("--out"):
+                flag, out_str = arg.split(" ", 1)
+                out_dict = ast.literal_eval(out_str)
+                new_out = {os.path.join("data", k): v for k, v in out_dict.items()}
+                quoted = shlex.quote(json.dumps(new_out))
+                final_args.append(f"{flag} {quoted}")
+            elif not arg.startswith("-") and arg.endswith(".txt"):
+                final_args.append(os.path.join("data", arg))
             else:
                 final_args.append(arg)
         if final_args:
